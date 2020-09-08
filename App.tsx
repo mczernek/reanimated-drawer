@@ -7,9 +7,9 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, StatusBar, Text, FlatList } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { PanGestureHandler, TouchableOpacity } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedGestureHandler,
@@ -101,7 +101,12 @@ const App = () => {
             </SafeAreaView>
             <SafeAreaView style={styles.contentColumnContainer}>
               <View style={styles.contentColumn}>
-                <Text>Content column</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    translate.value = withTiming(translate.value > 0 ? 0 : drawerWidth);
+                  }}>
+                  <Text>Toggle drawer</Text>
+                </TouchableOpacity>
               </View>
             </SafeAreaView>
           </Animated.View>
