@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, StatusBar, Text } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, FlatList } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
@@ -23,7 +23,7 @@ const drawerWidth = 250;
 const velocityThreshold = 1;
 const openingThreshold = drawerWidth / 2;
 
-const drawerGestureAreaWidth = 12;
+const drawerGestureAreaWidth = 18;
 
 const App = () => {
   const translate = useSharedValue(0 as number);
@@ -82,7 +82,21 @@ const App = () => {
           <Animated.View style={[styles.movingContentConteiner, contentStyle]}>
             <SafeAreaView style={styles.entriesColumnContainer}>
               <View style={styles.entriesColumn}>
-                <Text>Entries column</Text>
+                <FlatList
+                  style={{ width: '100%' }}
+                  data={items}
+                  keyExtractor={(item, index) => `${index}`}
+                  renderItem={(item) => (
+                    <Text
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        height: 80,
+                      }}>
+                      {`${item.item}`}
+                    </Text>
+                  )}
+                />
               </View>
             </SafeAreaView>
             <SafeAreaView style={styles.contentColumnContainer}>
@@ -115,6 +129,40 @@ const App = () => {
   );
 };
 
+const items = [
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'And again',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Once more',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+];
 const styles = StyleSheet.create({
   constainer: {},
   contentContainer: {
