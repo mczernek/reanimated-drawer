@@ -1,0 +1,11 @@
+# Config files
+tsconfig.json
+
+# Ignore all node_modules
+
+**/node_modules/**
+
+# Other
+
+/android/**
+/ios/**
