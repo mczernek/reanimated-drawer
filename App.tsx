@@ -14,7 +14,6 @@ import Animated, {
   useSharedValue,
   useAnimatedGestureHandler,
   useAnimatedStyle,
-  withDecay,
   withTiming,
 } from 'react-native-reanimated';
 
