@@ -14,7 +14,14 @@ import Animated, {
   useSharedValue,
   useAnimatedGestureHandler,
   useAnimatedStyle,
+  withDecay,
+  withTiming,
 } from 'react-native-reanimated';
+
+const drawerWidth = 250;
+
+const velocityThreshold = 1;
+const openingThreshold = drawerWidth / 2;
 
 const App = () => {
   const translateDrawer = useSharedValue(0 as number);
@@ -40,13 +47,39 @@ const App = () => {
     };
   });
 
+  const springConfig = {
+    damping: 7,
+    mass: 1,
+    stiffness: 121.6,
+    overshootClamping: false,
+    restSpeedThreshold: 0.001,
+    restDisplacementThreshold: 0.001,
+  };
+
   const onPan = useAnimatedGestureHandler({
-    onStart: (event, context) => {},
-    onActive: (event, context) => {
-      translateDrawer.value = event.translationX;
-      translateContent.value = event.translationX;
+    onStart: (event, context) => {
+      context.startX = translateDrawer.value;
     },
-    onEnd: (event, context) => {},
+    onActive: (event, context) => {
+      let translation = context.startX + event.translationX;
+      if (translation < 0) translation = 0;
+      if (translation > drawerWidth) translation = drawerWidth;
+      translateDrawer.value = translation;
+      translateContent.value = translation;
+    },
+    onEnd: (event, context) => {
+      let translation = context.startX + event.translationX;
+      if (
+        event.velocityX > velocityThreshold ||
+        (event.velocityX > -velocityThreshold && translation > openingThreshold)
+      ) {
+        translateDrawer.value = withTiming(drawerWidth);
+        translateContent.value = withTiming(drawerWidth);
+      } else {
+        translateDrawer.value = withTiming(0);
+        translateContent.value = withTiming(0);
+      }
+    },
   });
 
   return (
@@ -101,9 +134,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    start: -250,
+    start: -drawerWidth,
     backgroundColor: '#ffeecc',
-    width: 250,
+    width: drawerWidth,
   },
   drawerColumn: {
     backgroundColor: '#ffeecc',
