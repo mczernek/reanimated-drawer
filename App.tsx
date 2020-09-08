@@ -23,15 +23,17 @@ const drawerWidth = 250;
 const velocityThreshold = 1;
 const openingThreshold = drawerWidth / 2;
 
+const drawerGestureAreaWidth = 12;
+
 const App = () => {
-  const translateDrawer = useSharedValue(0 as number);
-  const translateContent = useSharedValue(0 as number);
+  const translate = useSharedValue(0 as number);
+  const drawerShown = useSharedValue(false);
 
   const drawerStyle = useAnimatedStyle(() => {
     return {
       transform: [
         {
-          translateX: translateDrawer.value,
+          translateX: translate.value,
         },
       ],
     };
@@ -41,31 +43,21 @@ const App = () => {
     return {
       transform: [
         {
-          translateX: translateContent.value,
+          translateX: translate.value,
         },
       ],
     };
   });
 
-  const springConfig = {
-    damping: 7,
-    mass: 1,
-    stiffness: 121.6,
-    overshootClamping: false,
-    restSpeedThreshold: 0.001,
-    restDisplacementThreshold: 0.001,
-  };
-
   const onPan = useAnimatedGestureHandler({
     onStart: (event, context) => {
-      context.startX = translateDrawer.value;
+      context.startX = translate.value;
     },
     onActive: (event, context) => {
       let translation = context.startX + event.translationX;
       if (translation < 0) translation = 0;
       if (translation > drawerWidth) translation = drawerWidth;
-      translateDrawer.value = translation;
-      translateContent.value = translation;
+      translate.value = translation;
     },
     onEnd: (event, context) => {
       let translation = context.startX + event.translationX;
@@ -73,11 +65,11 @@ const App = () => {
         event.velocityX > velocityThreshold ||
         (event.velocityX > -velocityThreshold && translation > openingThreshold)
       ) {
-        translateDrawer.value = withTiming(drawerWidth);
-        translateContent.value = withTiming(drawerWidth);
+        drawerShown.value = true;
+        translate.value = withTiming(drawerWidth);
       } else {
-        translateDrawer.value = withTiming(0);
-        translateContent.value = withTiming(0);
+        drawerShown.value = false;
+        translate.value = withTiming(0);
       }
     },
   });
@@ -86,29 +78,38 @@ const App = () => {
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaProvider style={styles.constainer}>
-        <PanGestureHandler onGestureEvent={onPan}>
-          <Animated.View style={styles.contentContainer}>
-            <Animated.View style={[styles.movingContentConteiner, contentStyle]}>
-              <SafeAreaView style={styles.entriesColumnContainer}>
-                <View style={styles.entriesColumn}>
-                  <Text>Entries column</Text>
-                </View>
-              </SafeAreaView>
-              <SafeAreaView style={styles.contentColumnContainer}>
-                <View style={styles.contentColumn}>
-                  <Text>Content column</Text>
-                </View>
-              </SafeAreaView>
-            </Animated.View>
-            <Animated.View style={[styles.drawerColumnContainer, drawerStyle]}>
-              <SafeAreaView style={{ flex: 1 }}>
-                <View style={styles.drawerColumn}>
-                  <Text>Drawer column</Text>
-                </View>
-              </SafeAreaView>
-            </Animated.View>
+        <Animated.View style={styles.contentContainer}>
+          <Animated.View style={[styles.movingContentConteiner, contentStyle]}>
+            <SafeAreaView style={styles.entriesColumnContainer}>
+              <View style={styles.entriesColumn}>
+                <Text>Entries column</Text>
+              </View>
+            </SafeAreaView>
+            <SafeAreaView style={styles.contentColumnContainer}>
+              <View style={styles.contentColumn}>
+                <Text>Content column</Text>
+              </View>
+            </SafeAreaView>
           </Animated.View>
-        </PanGestureHandler>
+          <PanGestureHandler onGestureEvent={onPan}>
+            <Animated.View
+              style={{
+                position: 'absolute',
+                height: '100%',
+                width: drawerGestureAreaWidth,
+              }}
+            />
+          </PanGestureHandler>
+          <Animated.View style={[styles.drawerColumnContainer, drawerStyle]}>
+            <SafeAreaView style={{ flex: 1 }}>
+              <PanGestureHandler onGestureEvent={onPan}>
+                <Animated.View style={styles.drawerColumn}>
+                  <Text>Drawer column</Text>
+                </Animated.View>
+              </PanGestureHandler>
+            </SafeAreaView>
+          </Animated.View>
+        </Animated.View>
       </SafeAreaProvider>
     </>
   );
