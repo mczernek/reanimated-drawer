@@ -6,8 +6,18 @@
  * @flow strict-local
  */
 
-import React from 'react';
-import { View, StyleSheet, StatusBar, Text, FlatList, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  Text,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Button,
+  NativeModules,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PanGestureHandler, TouchableOpacity } from 'react-native-gesture-handler';
 import Animated, {
@@ -16,6 +26,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { WebView } from 'react-native-webview';
 
 const drawerWidth = 250;
 
@@ -25,66 +36,50 @@ const openingThreshold = drawerWidth / 2;
 const drawerGestureAreaWidth = 18;
 
 const App = () => {
-  const translate = useSharedValue(0 as number);
-  const drawerShown = useSharedValue(false);
+  const [inputShown, setInputShown] = useState(false);
 
-  const drawerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateX: translate.value,
-        },
-      ],
-    };
-  });
+  const showKeyboard = () => {
+    console.log(NativeModules);
+    if (Platform.OS === 'android') {
+      NativeModules.FrontKeyboard.showKeyboard();
+    }
+  };
 
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateX: translate.value,
-        },
-      ],
-    };
-  });
+  let webViewRef: WebView | null;
+  let listRef: FlatList | null;
 
-  const onPan = useAnimatedGestureHandler({
-    onStart: (event, context) => {
-      context.startX = translate.value;
-    },
-    onActive: (event, context) => {
-      let translation = context.startX + event.translationX;
-      if (translation < 0) translation = 0;
-      if (translation > drawerWidth) translation = drawerWidth;
-      translate.value = translation;
-    },
-    onEnd: (event, context) => {
-      let translation = context.startX + event.translationX;
-      if (
-        event.velocityX > velocityThreshold ||
-        (event.velocityX > -velocityThreshold && translation > openingThreshold)
-      ) {
-        drawerShown.value = true;
-        translate.value = withTiming(drawerWidth);
-      } else {
-        drawerShown.value = false;
-        translate.value = withTiming(0);
-      }
-    },
-  });
+  let Script1 = `
+      document.getElementById("input").addEventListener("focus", function(received) {  
+       var data = {
+      type: "OnFocusEvent",
+      message : "OnFocusEvent",
+      received: received
+     };
+      window.ReactNativeWebView.postMessage(JSON.stringify({data}));
+        });
+        document.getElementById("input").focus();
+      `;
+
+  let Script2 = `document.activeElement.blur();`;
 
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaProvider style={styles.constainer}>
-        <Animated.View style={styles.contentContainer}>
-          <Animated.View style={[styles.movingContentConteiner, contentStyle]}>
+      <SafeAreaProvider style={styles.container}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS == 'ios' ? 'padding' : 'height'}>
+          <Animated.View style={styles.contentContainer}>
             <SafeAreaView style={styles.entriesColumnContainer}>
               <View style={styles.entriesColumn}>
                 <FlatList
                   style={{ width: '100%' }}
                   data={items}
-                  keyExtractor={(item, index) => `${index}`}
+                  keyExtractor={(_item, index) => `${index}`}
+                  ref={(ref) => (listRef = ref)}
+                  onScroll={() => {
+                    webViewRef?.injectJavaScript(Script2);
+                  }}
                   renderItem={(item) => (
                     <Text
                       style={{
@@ -97,37 +92,60 @@ const App = () => {
                   )}
                 />
               </View>
-            </SafeAreaView>
-            <SafeAreaView style={styles.contentColumnContainer}>
-              <View style={styles.contentColumn}>
-                <TouchableOpacity
-                  onPress={() => {
-                    translate.value = withTiming(translate.value > 0 ? 0 : drawerWidth);
-                  }}>
-                  <Text>Toggle drawer</Text>
-                </TouchableOpacity>
+              <View
+                style={{
+                  height: 150,
+                }}>
+                {inputShown && (
+                  <>
+                    <WebView
+                      ref={(ref) => (webViewRef = ref)}
+                      style={{ flex: 1 }}
+                      source={{
+                        html:
+                          '</br><form > <input id="input" class="input" type="text"  placeholder="Input "/></form>',
+                      }}
+                      keyboardDisplayRequiresUserAction={false} //ios
+                      injectedJavaScript={Script1}
+                      automaticallyAdjustContentInsets={false}
+                      allowFileAccessFromFileURLs={true}
+                      scalesPageToFit={false}
+                      mixedContentMode={'always'}
+                      javaScriptEnabled={true}
+                      startInLoadingState={true}
+                      onMessage={(event) => {
+                        console.log(event, 'Message received!');
+                        showKeyboard();
+                      }}
+                      onLoad={() => {}}
+                      onLoadEnd={() => {
+                        if (Platform.OS === 'android') {
+                          webViewRef?.requestFocus();
+                        }
+                      }}
+                    />
+                    <Button title={'Hide input'} onPress={() => setInputShown(false)} />
+                    <Button
+                      title={'Lose focus'}
+                      onPress={() => webViewRef?.injectJavaScript(Script2)}
+                    />
+                  </>
+                )}
+                {!inputShown && (
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'red',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Button title={'Show input'} onPress={() => setInputShown(true)} />
+                  </View>
+                )}
               </View>
             </SafeAreaView>
           </Animated.View>
-          <PanGestureHandler onGestureEvent={onPan}>
-            <Animated.View
-              style={{
-                position: 'absolute',
-                height: '100%',
-                width: drawerGestureAreaWidth,
-              }}
-            />
-          </PanGestureHandler>
-          <Animated.View style={[styles.drawerColumnContainer, drawerStyle]}>
-            <SafeAreaView style={{ flex: 1 }}>
-              <PanGestureHandler onGestureEvent={onPan}>
-                <Animated.View style={styles.drawerColumn}>
-                  <Text>Drawer column</Text>
-                </Animated.View>
-              </PanGestureHandler>
-            </SafeAreaView>
-          </Animated.View>
-        </Animated.View>
+        </KeyboardAvoidingView>
       </SafeAreaProvider>
     </>
   );
@@ -165,10 +183,10 @@ const items = [
   'Seven',
   'Eight',
   'Nine',
-  'Ten',
+  'Last',
 ];
 const styles = StyleSheet.create({
-  constainer: {},
+  container: {},
   contentContainer: {
     backgroundColor: '#ccaadd',
     flex: 1,
@@ -179,23 +197,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     start: 0,
     end: 0,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'stretch',
     justifyContent: 'center',
-  },
-  drawerColumnContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    start: -drawerWidth,
-    backgroundColor: '#ffeecc',
-    width: drawerWidth,
-  },
-  drawerColumn: {
-    backgroundColor: '#ffeecc',
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   entriesColumnContainer: {
     flex: 2,
