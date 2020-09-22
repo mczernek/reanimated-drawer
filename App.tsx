@@ -19,27 +19,14 @@ import {
   NativeModules,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { PanGestureHandler, TouchableOpacity } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
-
-const drawerWidth = 250;
-
-const velocityThreshold = 1;
-const openingThreshold = drawerWidth / 2;
-
-const drawerGestureAreaWidth = 18;
 
 const App = () => {
   const [inputShown, setInputShown] = useState(false);
 
   const showKeyboard = () => {
-    console.log(NativeModules);
     if (Platform.OS === 'android') {
       NativeModules.FrontKeyboard.showKeyboard();
     }
@@ -60,6 +47,8 @@ const App = () => {
         document.getElementById("input").focus();
       `;
 
+  let ScriptFocus = `document.getElementById("input").focus();`;
+
   let Script2 = `document.activeElement.blur();`;
 
   return (
@@ -69,7 +58,7 @@ const App = () => {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS == 'ios' ? 'padding' : 'height'}>
-          <Animated.View style={styles.contentContainer}>
+          <View style={styles.contentContainer}>
             <SafeAreaView style={styles.entriesColumnContainer}>
               <View style={styles.entriesColumn}>
                 <FlatList
@@ -78,6 +67,7 @@ const App = () => {
                   keyExtractor={(_item, index) => `${index}`}
                   ref={(ref) => (listRef = ref)}
                   onScroll={() => {
+                    console.log('OnScroll');
                     webViewRef?.injectJavaScript(Script2);
                   }}
                   renderItem={(item) => (
@@ -97,54 +87,68 @@ const App = () => {
                   height: 150,
                 }}>
                 {inputShown && (
-                  <>
-                    <WebView
-                      ref={(ref) => (webViewRef = ref)}
-                      style={{ flex: 1 }}
-                      source={{
-                        html:
-                          '</br><form > <input id="input" class="input" type="text"  placeholder="Input "/></form>',
-                      }}
-                      keyboardDisplayRequiresUserAction={false} //ios
-                      injectedJavaScript={Script1}
-                      automaticallyAdjustContentInsets={false}
-                      allowFileAccessFromFileURLs={true}
-                      scalesPageToFit={false}
-                      mixedContentMode={'always'}
-                      javaScriptEnabled={true}
-                      startInLoadingState={true}
-                      onMessage={(event) => {
-                        console.log(event, 'Message received!');
-                        showKeyboard();
-                      }}
-                      onLoad={() => {}}
-                      onLoadEnd={() => {
-                        if (Platform.OS === 'android') {
-                          webViewRef?.requestFocus();
-                        }
-                      }}
-                    />
-                    <Button title={'Hide input'} onPress={() => setInputShown(false)} />
-                    <Button
-                      title={'Lose focus'}
-                      onPress={() => webViewRef?.injectJavaScript(Script2)}
-                    />
-                  </>
+                  <PanGestureHandler
+                    onHandlerStateChange={({ nativeEvent }) => {
+                      if (nativeEvent.state === State.END && nativeEvent.y < -50) {
+                        setTimeout(() => webViewRef?.injectJavaScript(ScriptFocus), 90);
+                      }
+                    }}>
+                    <Animated.View style={{ flex: 1 }}>
+                      <WebView
+                        ref={(ref) => (webViewRef = ref)}
+                        style={{ flex: 1 }}
+                        source={{
+                          html:
+                            '</br><form > <input id="input" class="input" type="text"  placeholder="Input "/></form>',
+                        }}
+                        keyboardDisplayRequiresUserAction={false} //ios
+                        injectedJavaScript={Script1}
+                        automaticallyAdjustContentInsets={false}
+                        allowFileAccessFromFileURLs={true}
+                        scalesPageToFit={false}
+                        mixedContentMode={'always'}
+                        javaScriptEnabled={true}
+                        startInLoadingState={true}
+                        onMessage={(event) => {
+                          console.log('Message received!');
+                          showKeyboard();
+                        }}
+                        onLoad={() => {}}
+                        onLoadEnd={() => {
+                          if (Platform.OS === 'android') {
+                            webViewRef?.requestFocus();
+                          }
+                        }}
+                      />
+                      <Button title={'Hide input'} onPress={() => setInputShown(false)} />
+                      <Button
+                        title={'Lose focus'}
+                        onPress={() => webViewRef?.injectJavaScript(Script2)}
+                      />
+                    </Animated.View>
+                  </PanGestureHandler>
                 )}
                 {!inputShown && (
-                  <View
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'red',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                  <PanGestureHandler
+                    onHandlerStateChange={({ nativeEvent }) => {
+                      if (nativeEvent.state === State.END && nativeEvent.y < -50) {
+                        setInputShown(true);
+                      }
                     }}>
-                    <Button title={'Show input'} onPress={() => setInputShown(true)} />
-                  </View>
+                    <Animated.View
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#cceecc',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Button title={'Show input'} onPress={() => setInputShown(true)} />
+                    </Animated.View>
+                  </PanGestureHandler>
                 )}
               </View>
             </SafeAreaView>
-          </Animated.View>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaProvider>
     </>
